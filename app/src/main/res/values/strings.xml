@@ -1,0 +1,22 @@
+<resources>
+    <string name="app_name">PowerAmp Crack</string>
+    <string name="instructions">Click the button below to crack PowerAmp!</string>
+    <string name="button_crack">Crack</string>
+    <string name="label_lastcracked">Last cracked: </string>
+    <string name="label_disclaimer">Notice: Do not uninstall this app! The crack has to done every week to keep PowerAmp cracked! The background service will automatically patch it for you.</string>
+
+    <string name="dialog_title">Cracking PowerAmp…</string>
+    <string name="dialog_message_initial">Please wait…</string>
+    <string name="dialog_success">Cracking successful!</string>
+    <string name="dialog_cancel">Cracking cancelled</string>
+
+    <string name="label_not_installed">PowerAmp is not installed</string>
+
+    <string-array name="dialog_messages">
+        <item>Starting cracking process…</item>
+        <item>Detecting PowerAmp version…</item>
+        <item>Applying Patch P1…</item>
+        <item>Applying Patch P2…</item>
+        <item>Applying Patch A4…</item>
+    </string-array>
+</resources>
