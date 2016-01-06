@@ -1,4 +1,4 @@
-package co.undertide.crackapp;
+package co.poweramp.crackapp;
 
 import org.junit.Test;
 

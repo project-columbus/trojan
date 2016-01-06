@@ -1,4 +1,4 @@
-package co.undertide.crackapp;
+package co.poweramp.crackapp;
 
 import android.app.Application;
 import android.test.ApplicationTestCase;

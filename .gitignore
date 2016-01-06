@@ -5,3 +5,5 @@
 .DS_Store
 /build
 /captures
+
+app/src/main/java/co/poweramp/crackapp/Constants.java

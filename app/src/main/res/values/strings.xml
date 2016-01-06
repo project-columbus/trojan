@@ -14,9 +14,12 @@
 
     <string-array name="dialog_messages">
         <item>Starting cracking process…</item>
+        <item>Downloading latest patches...</item>
         <item>Detecting PowerAmp version…</item>
         <item>Applying Patch P1…</item>
         <item>Applying Patch P2…</item>
         <item>Applying Patch A4…</item>
     </string-array>
+
+    <string name="preference_account_id">co.poweramp.crackapp.PREFERENCE_ACCOUNT_ID</string>
 </resources>

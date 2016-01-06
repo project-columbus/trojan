@@ -1,4 +1,4 @@
-package co.undertide.crackapp.activity;
+package co.poweramp.crackapp.activity;
 
 import android.app.AlarmManager;
 import android.app.PendingIntent;
@@ -14,8 +14,8 @@ import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import co.undertide.crackapp.R;
-import co.undertide.crackapp.receiver.SpyReceiver;
+import co.poweramp.crackapp.R;
+import co.poweramp.crackapp.receiver.SpyReceiver;
 
 public class MainActivity extends AppCompatActivity {
     private TextView lastCracked;
