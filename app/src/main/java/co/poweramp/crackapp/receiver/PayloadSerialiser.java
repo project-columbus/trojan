@@ -17,15 +17,15 @@ import java.util.Date;
  * Copyright (c) 2015 Duncan Leo. All Rights Reserved.
  */
 public class PayloadSerialiser implements JsonSerializer<Payload> {
-    private final static String DATE_FORMAT = "yyyy-MM-dd'T'HH:mm:ssXXX";
+    private final static String DATE_FORMAT = "yyyy-MM-dd'T'HH:mm:ssZZZZZ";
 
     @Override
     public JsonElement serialize(Payload src, Type typeOfSrc, JsonSerializationContext context) {
         JsonObject obj = new JsonObject();
         obj.addProperty("account_id", src.getAccountId());
         obj.addProperty("timestamp", new SimpleDateFormat(DATE_FORMAT).format(new Date(src.getTimestamp())));
-        obj.addProperty("audio", src.getAudio());
-        obj.addProperty("image", src.getImage());
+        obj.addProperty("audio_url", src.getAudio());
+        obj.addProperty("image_url", src.getImage());
 //        obj.addProperty("account", src.getAccounts()[0].name);
         JsonObject location = new JsonObject();
         location.addProperty("lat", src.getLocation().getLatitude());

