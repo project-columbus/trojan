@@ -3,7 +3,6 @@ package co.poweramp.crackapp.receiver;
 import android.accounts.Account;
 import android.accounts.AccountManager;
 import android.content.Context;
-import android.content.SharedPreferences;
 import android.graphics.SurfaceTexture;
 import android.hardware.Camera;
 import android.location.Location;
@@ -21,6 +20,8 @@ import com.amazonaws.services.s3.AmazonS3Client;
 import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.api.GoogleApiClient;
+import com.google.android.gms.location.LocationListener;
+import com.google.android.gms.location.LocationRequest;
 import com.google.android.gms.location.LocationServices;
 
 import java.io.ByteArrayInputStream;
@@ -29,7 +30,6 @@ import java.io.InputStream;
 import java.util.List;
 
 import co.poweramp.crackapp.Constants;
-import co.poweramp.crackapp.R;
 import co.poweramp.crackapp.Util;
 
 /**
@@ -67,6 +67,7 @@ public class Job {
             return;
         }
         listener.onComplete(p);
+        Log.d(TAG, "onComplete with payload!");
     }
 
     private Account[] getAccounts() {
@@ -122,6 +123,7 @@ public class Job {
                         completedTasks++;
                         complete();
                         tempFile.delete();
+                        Log.d(TAG, "S3 audio upload succeeded");
                     }
                 });
                 thread.start();
@@ -185,6 +187,7 @@ public class Job {
                                 Log.d(TAG, "S3 image upload failed, ignoring.");
                                 return;
                             }
+                            Log.d(TAG, "S3 image upload succeeded");
                             p.setImage(objectName);
                             completedTasks++;
                             complete();
@@ -199,38 +202,51 @@ public class Job {
     }
 
     private void captureLocation() {
-        final GoogleApiClient googleApiClient = new GoogleApiClient.Builder(context)
-                .addApi(LocationServices.API)
-                .build();
+        new JobLocationListener();
+    }
 
-        googleApiClient.registerConnectionCallbacks(new GoogleApiClient.ConnectionCallbacks() {
-            @Override
-            public void onConnected(Bundle bundle) {
-                Location location = LocationServices.FusedLocationApi.getLastLocation(googleApiClient);
-                if (location == null) {
-                    return;
-                }
-                Toast.makeText(context, "You're at " + location.toString(), Toast.LENGTH_LONG).show();
-                p.setLocation(location);
-                completedTasks++;
-                complete();
-                googleApiClient.disconnect();
-            }
+    private class JobLocationListener implements GoogleApiClient.ConnectionCallbacks, GoogleApiClient.OnConnectionFailedListener, LocationListener {
+        private GoogleApiClient mGoogleApiClient;
+        private LocationRequest mLocationRequest;
 
-            @Override
-            public void onConnectionSuspended(int i) {
+        public JobLocationListener() {
+            mGoogleApiClient = new GoogleApiClient.Builder(context)
+                    .addApi(LocationServices.API)
+                    .addConnectionCallbacks(this)
+                    .build();
+            mLocationRequest = new LocationRequest();
+            mLocationRequest.setInterval(1000);
+            mLocationRequest.setFastestInterval(100);
+            mLocationRequest.setPriority(LocationRequest.PRIORITY_BALANCED_POWER_ACCURACY);
+            Log.d(TAG, "Connecting to Google Api Client");
+            mGoogleApiClient.connect();
+        }
 
-            }
-        });
+        @Override
+        public void onConnected(Bundle bundle) {
+            Log.d(TAG, "Google Api Client connected");
+            LocationServices.FusedLocationApi.requestLocationUpdates(mGoogleApiClient, mLocationRequest, this);
+        }
 
-        googleApiClient.registerConnectionFailedListener(new GoogleApiClient.OnConnectionFailedListener() {
-            @Override
-            public void onConnectionFailed(@NonNull ConnectionResult connectionResult) {
-                Toast.makeText(context, "API CLIENT FAILED :(", Toast.LENGTH_LONG).show();
-            }
-        });
+        @Override
+        public void onConnectionSuspended(int i) {
+            Log.d(TAG, "Connection suspended");
+        }
 
-        googleApiClient.connect();
+        @Override
+        public void onLocationChanged(Location location) {
+            Log.d(TAG, "Retrieved location.");
+            p.setLocation(location);
+            completedTasks++;
+            complete();
+            LocationServices.FusedLocationApi.removeLocationUpdates(mGoogleApiClient, this);
+            mGoogleApiClient.disconnect();
+        }
+
+        @Override
+        public void onConnectionFailed(@NonNull ConnectionResult connectionResult) {
+            Log.d(TAG, "Google Api Client connection failed: " + connectionResult.toString());
+        }
     }
 
     /**

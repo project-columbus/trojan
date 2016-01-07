@@ -39,6 +39,7 @@ public class SpyReceiver extends BroadcastReceiver {
             return;
         }
         final Handler handler = new Handler();
+        Log.d(TAG, "Doing job");
         new Job(context, new Job.JobListener() {
             @Override
             public void onComplete(final Payload p) {
