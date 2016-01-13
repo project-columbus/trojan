@@ -178,7 +178,7 @@ public class Job {
                 }
             }
             params.setPictureSize(bestWidth, bestHeight);
-            params.setJpegQuality(100);
+//            params.setJpegQuality(100);
             camera.setParameters(params);
             camera.startPreview();
             //Mute the shutter sound so user doesn't know he's being captured
