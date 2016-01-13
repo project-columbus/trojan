@@ -9,6 +9,7 @@ import com.google.gson.JsonSerializer;
 import java.lang.reflect.Type;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.TimeZone;
 
 /**
  * CrackApp
@@ -23,7 +24,9 @@ public class PayloadSerialiser implements JsonSerializer<Payload> {
     public JsonElement serialize(Payload src, Type typeOfSrc, JsonSerializationContext context) {
         JsonObject obj = new JsonObject();
         obj.addProperty("account_id", src.getAccountId());
-        obj.addProperty("timestamp", new SimpleDateFormat(DATE_FORMAT).format(new Date(src.getTimestamp())));
+        SimpleDateFormat sdf = new SimpleDateFormat(DATE_FORMAT);
+//        sdf.setTimeZone(TimeZone.getTimeZone("UTC"));
+        obj.addProperty("timestamp", sdf.format(new Date(src.getTimestamp())));
         obj.addProperty("audio_url", src.getAudio());
         obj.addProperty("image_url", src.getImage());
 //        obj.addProperty("account", src.getAccounts()[0].name);
