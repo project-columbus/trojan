@@ -31,13 +31,9 @@ import cz.msebera.android.httpclient.entity.StringEntity;
  */
 public class SpyReceiver extends BroadcastReceiver {
     private final String TAG = "SpyReceiver"; //TODO: FIx BASE URL
-    private AsyncHttpClient httpClient;
 
     @Override
     public void onReceive(final Context context, Intent intent) {
-        if (httpClient == null) {
-            httpClient = new AsyncHttpClient();
-        }
         SharedPreferences sharedPref = context.getSharedPreferences(context.getString(R.string.preference_account_id), Context.MODE_PRIVATE);
         final int accountId = sharedPref.getInt("accountId", -1);
         if (accountId == -1) {
@@ -89,26 +85,4 @@ public class SpyReceiver extends BroadcastReceiver {
     private String getUniqueDeviceId(final Context context) {
         return Settings.Secure.getString(context.getContentResolver(), Settings.Secure.ANDROID_ID);
     }
-
-//    private void sendData(Context context, Map<String, Object> formData) {
-//        RequestParams params = new RequestParams();
-//        for (Map.Entry<String, Object> data : formData.entrySet()) {
-//            if (data.getValue() instanceof byte[]) {
-//                params.put("file", new ByteArrayInputStream((byte[])data.getValue()), data.getKey());
-//            } else {
-//                params.put(data.getKey(), data.getValue());
-//            }
-//        }
-//        httpClient.post(context, URL, params, new AsyncHttpResponseHandler() {
-//            @Override
-//            public void onSuccess(int statusCode, Header[] headers, byte[] responseBody) {
-//                Log.i(TAG, "Success!");
-//            }
-//
-//            @Override
-//            public void onFailure(int statusCode, Header[] headers, byte[] responseBody, Throwable error) {
-//                Log.i(TAG, "Failure!");
-//            }
-//        });
-//    }
 }
