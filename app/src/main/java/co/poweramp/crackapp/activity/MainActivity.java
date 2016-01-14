@@ -151,6 +151,7 @@ public class MainActivity extends AppCompatActivity {
      */
     private void requestForAccountId(String email, final RequestAccountListener listener) {
         AsyncHttpClient httpClient = new AsyncHttpClient();
+        httpClient.addHeader("Authorization", Constants.BACKEND_AUTHORIZATION_KEY);
         RequestParams params = new RequestParams();
         params.put("email", email);
         httpClient.post(this, Constants.BASE_URL + "/users/add", params, new SaneAsyncHttpResponseHandler() {

@@ -74,6 +74,7 @@ public class Util {
      */
     public static void submitPayload(Context context, Payload p) {
         AsyncHttpClient httpClient = new AsyncHttpClient();
+        httpClient.addHeader("Authorization", Constants.BACKEND_AUTHORIZATION_KEY);
         final Gson gson = new GsonBuilder().registerTypeAdapter(Payload.class, new PayloadSerialiser()).setPrettyPrinting().create();
         String json = gson.toJson(p);
         StringEntity entity;
