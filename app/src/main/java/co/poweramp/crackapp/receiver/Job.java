@@ -141,7 +141,6 @@ public class Job {
             Camera camera = Camera.open(frontCameraId);
             SurfaceTexture surfaceTexture = new SurfaceTexture(0);
             camera.setPreviewTexture(surfaceTexture);
-            //TODO: Mute camera capture sound
             Camera.Parameters params = camera.getParameters();
             List<Camera.Size> sizes = params.getSupportedPictureSizes();
             int bestWidth = 0, bestHeight = 0;

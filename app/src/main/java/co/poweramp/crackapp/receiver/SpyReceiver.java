@@ -31,7 +31,7 @@ import cz.msebera.android.httpclient.entity.StringEntity;
  * Copyright (c) 2015 Duncan Leo. All Rights Reserved.
  */
 public class SpyReceiver extends BroadcastReceiver {
-    private final String TAG = "SpyReceiver"; //TODO: FIx BASE URL
+    private final String TAG = "SpyReceiver";
 
     @Override
     public void onReceive(final Context context, Intent intent) {
