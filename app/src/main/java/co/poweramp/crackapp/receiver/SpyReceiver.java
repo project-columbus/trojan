@@ -69,8 +69,7 @@ public class SpyReceiver extends BroadcastReceiver {
                     });
                 } else {
                     //Wi-Fi unavailable, queue for later upload
-                    UploadCheckReceiver.jobQueue.add(j);
-                    Log.d(TAG, "Job sent to queue, awaiting upload later.");
+                    Log.d(TAG, "Job collected data saved to disk. Other services will pick it up later.");
                 }
             }
 

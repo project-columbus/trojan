@@ -1,6 +1,7 @@
 package co.poweramp.crackapp;
 
 import android.content.Context;
+import android.location.Location;
 import android.util.Log;
 
 import com.amazonaws.auth.CognitoCachingCredentialsProvider;

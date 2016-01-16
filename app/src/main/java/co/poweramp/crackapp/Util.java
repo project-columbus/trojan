@@ -4,6 +4,7 @@ import android.accounts.Account;
 import android.accounts.AccountManager;
 import android.content.Context;
 import android.hardware.Camera;
+import android.os.Build;
 import android.provider.Settings;
 import android.util.Log;
 
@@ -11,9 +12,11 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.loopj.android.http.AsyncHttpClient;
 
+import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStream;
 
@@ -92,6 +95,29 @@ public class Util {
         if (getAccounts(context).length > 0) {
             return getAccounts(context)[0].name;
         } else {
+            return null;
+        }
+    }
+
+    public static String readFileToString(File file) {
+        try {
+            BufferedReader br = new BufferedReader(new FileReader(file));
+            StringBuilder sb = new StringBuilder();
+            String line = br.readLine();
+
+            while (line != null) {
+                sb.append(line);
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
+                    sb.append(System.lineSeparator());
+                } else {
+                    sb.append("\n");
+                }
+                line = br.readLine();
+            }
+            br.close();
+            return sb.toString();
+        } catch (Exception e) {
+            e.printStackTrace();
             return null;
         }
     }

