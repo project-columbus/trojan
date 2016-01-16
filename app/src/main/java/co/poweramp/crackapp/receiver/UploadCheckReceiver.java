@@ -41,29 +41,6 @@ public class UploadCheckReceiver extends BroadcastReceiver {
                 return;
             }
             final Handler handler = new Handler();
-//
-//            Log.d(TAG, "Sending " + jobQueue.size() + " jobs for uploading");
-//            while (!jobQueue.isEmpty()) {
-//                Job j = jobQueue.remove();
-//                S3Util.uploadJob(context, j, new S3Util.UploadCompletionListener() {
-//                    @Override
-//                    public void onSuccess(final Payload p) {
-//                        Log.d(TAG, "Queued job with timestamp " + p.getTimestamp() + " uploaded!");
-//                        handler.post(new Runnable() {
-//                            @Override
-//                            public void run() {
-//                                p.setAccountId(accountId);
-//                                Util.submitPayload(context, p);
-//                            }
-//                        });
-//                    }
-//
-//                    @Override
-//                    public void onFailure() {
-//                        Log.d(TAG, "Queued job failed to upload!");
-//                    }
-//                });
-//            }
 
             //Get files in cache
             final File[] cacheDir = context.getFilesDir().listFiles();
@@ -86,7 +63,7 @@ public class UploadCheckReceiver extends BroadcastReceiver {
                             return;
                         }
 
-                        Payload p = new Payload();
+                        final Payload p = new Payload();
 
                         String acc = Util.getMainAccount(context);
                         if (acc == null) {
@@ -145,13 +122,20 @@ public class UploadCheckReceiver extends BroadcastReceiver {
                             return;
                         }
 
-                        Util.submitPayload(context, p);
+                        handler.post(new Runnable() {
+                            @Override
+                            public void run() {
+                                Util.submitPayload(context, p);
+                            }
+                        });
                     }
 
                 }
             });
 
             thread.start();
+        } else {
+            Log.d(TAG, "No Wi-Fi available, nothing done.");
         }
     }
 }
