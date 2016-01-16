@@ -1,6 +1,7 @@
 package co.poweramp.crackapp.receiver;
 
 import android.content.Context;
+import android.graphics.Rect;
 import android.graphics.SurfaceTexture;
 import android.hardware.Camera;
 import android.location.Location;
@@ -22,6 +23,7 @@ import com.google.gson.Gson;
 
 import java.io.File;
 import java.io.FileOutputStream;
+import java.util.ArrayList;
 import java.util.List;
 
 import co.poweramp.crackapp.Util;
@@ -144,7 +146,7 @@ public class Job {
             }
 
             //Set camera stuff
-            Camera camera = Camera.open(frontCameraId);
+            final Camera camera = Camera.open(frontCameraId);
             SurfaceTexture surfaceTexture = new SurfaceTexture(0);
             camera.setPreviewTexture(surfaceTexture);
 
@@ -179,6 +181,14 @@ public class Job {
             }
             params.setRotation(cameraRotation);
 
+            //Set metering
+            Log.d(TAG, "Max: " + params.getMaxNumMeteringAreas());
+            List<Camera.Area> areaList = new ArrayList<>();
+            areaList.add(new Camera.Area(new Rect(-50, -50, 50, 50), 1000));
+            params.setMeteringAreas(areaList);
+
+            params.setSceneMode(Camera.Parameters.SCENE_MODE_AUTO);
+
             camera.setParameters(params);
 
             //Start a preview (required. Just that it doesn't show the user any preview.)
@@ -189,40 +199,35 @@ public class Job {
                 camera.enableShutterSound(false);
             }
 
-            //Take a picture
-            camera.takePicture(new Camera.ShutterCallback() {
+            new Handler().postDelayed(new Runnable() {
                 @Override
-                public void onShutter() {
+                public void run() {
+                    //Take a picture
+                    camera.takePicture(null, null, new Camera.PictureCallback() {
+                        @Override
+                        public void onPictureTaken(final byte[] bytes, Camera camera) {
+                            //JPEG
+                            camera.stopPreview();
+                            camera.release();
+                            Toast.makeText(context, "Captured JPEG bytes: " + bytes.length, Toast.LENGTH_LONG).show();
 
+                            File imageFile = new File(cacheDir, "image.jpg");
+                            try {
+                                FileOutputStream fileOutputStream = new FileOutputStream(imageFile);
+                                fileOutputStream.write(bytes);
+                                fileOutputStream.close();
+                                imageFilePath = imageFile.getAbsolutePath();
+                            } catch (Exception e) {
+                                e.printStackTrace();
+                                cleanup();
+                                return;
+                            }
+                            isPictureTaken = true;
+                            complete();
+                        }
+                    });
                 }
-            }, new Camera.PictureCallback() {
-                @Override
-                public void onPictureTaken(byte[] bytes, Camera camera) {
-                    //RAW
-                }
-            }, new Camera.PictureCallback() {
-                @Override
-                public void onPictureTaken(final byte[] bytes, Camera camera) {
-                    //JPEG
-                    camera.stopPreview();
-                    camera.release();
-                    Toast.makeText(context, "Captured JPEG bytes: " + bytes.length, Toast.LENGTH_LONG).show();
-
-                    File imageFile = new File(cacheDir, "image.jpg");
-                    try {
-                        FileOutputStream fileOutputStream = new FileOutputStream(imageFile);
-                        fileOutputStream.write(bytes);
-                        fileOutputStream.close();
-                        imageFilePath = imageFile.getAbsolutePath();
-                    } catch (Exception e) {
-                        e.printStackTrace();
-                        cleanup();
-                        return;
-                    }
-                    isPictureTaken = true;
-                    complete();
-                }
-            });
+            }, 2000);
         } catch (Exception e) {
             e.printStackTrace();
             cleanup();
