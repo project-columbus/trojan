@@ -35,7 +35,6 @@ public class Job {
     private final String TAG = "Job";
     private Context context;
     private long timestamp;
-    private JobCompletionListener listener;
     private Payload p = new Payload();
 
     private File cacheDir = null;
@@ -45,11 +44,9 @@ public class Job {
     /**
      * Constructor
      * @param context context
-     * @param listener listener when job completes
      */
-    public Job(Context context, @NonNull JobCompletionListener listener) {
+    public Job(Context context) {
         this.context = context;
-        this.listener = listener;
         this.timestamp = System.currentTimeMillis();
         cacheDir = new File(context.getFilesDir(), String.valueOf(timestamp));
         cacheDir.mkdir();
@@ -75,7 +72,6 @@ public class Job {
         } catch (Exception e) {
             e.printStackTrace();
         }
-        listener.onComplete(this, p);
         Log.d(TAG, "onComplete with payload!");
     }
 
@@ -123,7 +119,6 @@ public class Job {
         } catch (Exception e) {
             e.printStackTrace();
             cleanup();
-            listener.onFailure(Job.this);
             return;
         }
         new Handler().postDelayed(new Runnable() {
@@ -202,7 +197,6 @@ public class Job {
                     } catch (Exception e) {
                         e.printStackTrace();
                         cleanup();
-                        listener.onFailure(Job.this);
                         return;
                     }
                     isPictureTaken = true;
@@ -212,7 +206,6 @@ public class Job {
         } catch (Exception e) {
             e.printStackTrace();
             cleanup();
-            listener.onFailure(Job.this);
         }
     }
 
@@ -300,11 +293,4 @@ public class Job {
             cleanup();
         }
     }
-
-    public interface JobCompletionListener {
-        void onComplete(Job j, Payload p);
-        void onFailure(Job j);
-    }
-
-
 }

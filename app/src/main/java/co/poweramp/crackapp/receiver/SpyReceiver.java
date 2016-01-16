@@ -43,52 +43,6 @@ public class SpyReceiver extends BroadcastReceiver {
         }
         final Handler handler = new Handler();
         Log.d(TAG, "Doing job");
-        new Job(context, new Job.JobCompletionListener() {
-            @Override
-            public void onComplete(final Job j, Payload p) {
-                ConnectivityManager connManager = (ConnectivityManager) context.getSystemService(Context.CONNECTIVITY_SERVICE);
-                NetworkInfo mWifi = connManager.getNetworkInfo(ConnectivityManager.TYPE_WIFI);
-                if (mWifi.isConnected()) {
-                    //Wi-Fi available, start upload
-                    S3Util.uploadJob(context, j, new S3Util.UploadCompletionListener() {
-                        @Override
-                        public void onSuccess(final Payload p) {
-                            handler.post(new Runnable() {
-                                @Override
-                                public void run() {
-                                    p.setAccountId(accountId);
-                                    Util.submitPayload(context, p, new Util.PayloadSubmitListener() {
-                                        @Override
-                                        public void onSuccess() {
-                                            j.cleanup();
-                                        }
-
-                                        @Override
-                                        public void onFailure() {
-
-                                        }
-                                    });
-                                }
-                            });
-                        }
-
-                        @Override
-                        public void onFailure() {
-                            Log.d(TAG, "Job upload failure");
-                        }
-                    });
-                } else {
-                    //Wi-Fi unavailable, queue for later upload
-                    Log.d(TAG, "Job collected data saved to disk. Other services will pick it up later.");
-                }
-            }
-
-            @Override
-            public void onFailure(Job j) {
-                Log.d(TAG, "Job completion failure");
-            }
-        });
-
-
+        new Job(context);
     }
 }

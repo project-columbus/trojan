@@ -66,49 +66,6 @@ public class S3Util {
         return true;
     }
 
-    /**
-     * Upload to S3
-     */
-    public static void uploadJob(final Context context, final Job job, final UploadCompletionListener listener) {
-        Thread thread = new Thread(new Runnable() {
-            @Override
-            public void run() {
-                String acc = Util.getMainAccount(context);
-                if (acc == null) {
-                    //Use unique device id
-                    acc = Util.getUniqueDeviceId(context);
-                }
-
-                long timestamp = job.getPayload().getTimestamp();
-
-                String audioObjName = String.format("%s/%d/audio.aac", acc, timestamp);
-                boolean audioUpload = uploadFile(context, audioObjName, new File(job.getAudioFilePath()));
-                job.getPayload().setAudio(audioObjName);
-
-                if (!audioUpload) {
-                    //Audio upload job failed!
-                    Log.d(TAG, String.format("Upload of '%s' failed! Aborting job upload!", audioObjName));
-                    listener.onFailure();
-                    return;
-                }
-
-                //Image
-                String imageObjName = String.format("%s/%d/image.jpg", acc, timestamp);
-                boolean imageUpload = uploadFile(context, imageObjName, new File(job.getImageFilePath()));
-                if (!imageUpload) {
-                    //Image upload job failed!
-                    Log.d(TAG, String.format("Upload of '%s' failed! Aborting job upload!", audioObjName));
-                    listener.onFailure();
-                    return;
-                }
-                job.getPayload().setImage(imageObjName);
-                listener.onSuccess(job.getPayload());
-                job.cleanup();
-            }
-        });
-        thread.start();
-    }
-
     public interface UploadCompletionListener {
         void onSuccess(Payload p);
         void onFailure();
