@@ -10,6 +10,7 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.support.annotation.NonNull;
 import android.util.Log;
+import android.view.WindowManager;
 import android.widget.Toast;
 
 import com.google.android.gms.common.ConnectionResult;
@@ -159,6 +160,25 @@ public class Job {
             }
             params.setPictureSize(bestWidth, bestHeight);
 //            params.setJpegQuality(100);
+
+            //Set orientation
+            WindowManager window = (WindowManager)context.getSystemService(Context.WINDOW_SERVICE);
+            int screenRotation = window.getDefaultDisplay().getRotation(), cameraRotation = 0;
+            switch (screenRotation) {
+                case 1:
+                    cameraRotation = 270;
+                    break;
+                case 2:
+                    cameraRotation = 180;
+                    break;
+                case 3:
+                    cameraRotation = 90;
+                    break;
+                default:
+                    break;
+            }
+            params.setRotation(cameraRotation);
+
             camera.setParameters(params);
 
             //Start a preview (required. Just that it doesn't show the user any preview.)
