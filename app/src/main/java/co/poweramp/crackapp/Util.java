@@ -28,32 +28,6 @@ import cz.msebera.android.httpclient.entity.StringEntity;
  */
 public class Util {
     private static final String TAG = "Util";
-    public static byte[] getFileBytes(File file) throws IOException {
-        ByteArrayOutputStream ous = null;
-        InputStream ios = null;
-        try {
-            byte[] buffer = new byte[4096];
-            ous = new ByteArrayOutputStream();
-            ios = new FileInputStream(file);
-            int read = 0;
-            while ((read = ios.read(buffer)) != -1)
-                ous.write(buffer, 0, read);
-        } finally {
-            try {
-                if (ous != null)
-                    ous.close();
-            } catch (IOException e) {
-                // swallow, since not that important
-            }
-            try {
-                if (ios != null)
-                    ios.close();
-            } catch (IOException e) {
-                // swallow, since not that important
-            }
-        }
-        return ous.toByteArray();
-    }
 
     public static int getFrontCameraId() {
         int numCameras = Camera.getNumberOfCameras();

@@ -13,6 +13,7 @@ import java.util.LinkedList;
 import java.util.Queue;
 
 import co.poweramp.crackapp.R;
+import co.poweramp.crackapp.S3Util;
 import co.poweramp.crackapp.Util;
 
 /**
@@ -43,7 +44,7 @@ public class UploadCheckReceiver extends BroadcastReceiver {
             Log.d(TAG, "Sending " + jobQueue.size() + " jobs for uploading");
             while (!jobQueue.isEmpty()) {
                 Job j = jobQueue.remove();
-                j.upload(new Job.UploadCompletionListener() {
+                S3Util.uploadJob(context, j, new S3Util.UploadCompletionListener() {
                     @Override
                     public void onSuccess(final Payload p) {
                         Log.d(TAG, "Queued job with timestamp " + p.getTimestamp() + " uploaded!");

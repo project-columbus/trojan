@@ -14,20 +14,17 @@ import android.support.annotation.NonNull;
 import android.util.Log;
 import android.widget.Toast;
 
-import com.amazonaws.auth.CognitoCachingCredentialsProvider;
-import com.amazonaws.regions.Regions;
-import com.amazonaws.services.s3.AmazonS3Client;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.api.GoogleApiClient;
 import com.google.android.gms.location.LocationListener;
 import com.google.android.gms.location.LocationRequest;
 import com.google.android.gms.location.LocationServices;
+import com.google.gson.JsonObject;
 
 import java.io.File;
 import java.io.FileOutputStream;
 import java.util.List;
 
-import co.poweramp.crackapp.Constants;
 import co.poweramp.crackapp.Util;
 
 /**
@@ -42,10 +39,9 @@ public class Job {
     private long timestamp;
     private JobCompletionListener listener;
     private Payload p = new Payload();
-    private static AmazonS3Client sS3Client;
-    private static CognitoCachingCredentialsProvider sCredProvider;
 
-    private String audioFilePath = null, imageFilePath = null;
+
+    private String audioFilePath = null, imageFilePath = null, locFilePath = null;
     private boolean isLocationCaptured = false, isAudioRecorded = false, isPictureTaken = false;
 
     public Job(Context context, @NonNull JobCompletionListener listener) {
@@ -74,49 +70,11 @@ public class Job {
     /**
      * Clean up saved files. If any failure, ignore.
      */
-    private void cleanup() {
-        File audioFile = new File(audioFilePath), imageFile = new File(imageFilePath);
+    public void cleanup() {
+        File audioFile = new File(audioFilePath), imageFile = new File(imageFilePath), locFile = new File(locFilePath);
         audioFile.delete();
         imageFile.delete();
-    }
-
-    /**
-     * Upload to S3
-     */
-    public void upload(final UploadCompletionListener listener) {
-        Thread thread = new Thread(new Runnable() {
-            @Override
-            public void run() {
-                //Audio
-                File audioFile = new File(audioFilePath);
-                String audioObjName = String.format("%s/%d/audio.aac", getMainAccount().name, timestamp);
-                try {
-                    getS3Client(context).putObject(Constants.BUCKET_NAME, audioObjName, audioFile);
-                } catch (Exception e) {
-                    e.printStackTrace();
-                    listener.onFailure();
-                    return;
-                }
-                p.setAudio(audioObjName);
-                Log.d(TAG, "Uploaded audio to S3");
-
-                //Image
-                File imageFile = new File(imageFilePath);
-                String imageObjName = String.format("%s/%d/image.jpg", getMainAccount().name, timestamp);
-                try {
-                    getS3Client(context).putObject(Constants.BUCKET_NAME, imageObjName, imageFile);
-                } catch (Exception e) {
-                    e.printStackTrace();
-                    listener.onFailure();
-                    return;
-                }
-                p.setImage(imageObjName);
-                Log.d(TAG, "Uploaded image to S3");
-                listener.onSuccess(p);
-                cleanup();
-            }
-        });
-        thread.start();
+        locFile.delete();
     }
 
     private Account[] getAccounts() {
@@ -124,8 +82,24 @@ public class Job {
         return accountManager.getAccounts();
     }
 
-    private Account getMainAccount() {
+    public Account getMainAccount() {
         return getAccounts()[0];
+    }
+
+    public String getAudioFilePath() {
+        return audioFilePath;
+    }
+
+    public String getImageFilePath() {
+        return imageFilePath;
+    }
+
+    public String getLocFilePath() {
+        return locFilePath;
+    }
+
+    public Payload getPayload() {
+        return p;
     }
 
     private void recordAudio() {
@@ -266,6 +240,22 @@ public class Job {
             complete();
             LocationServices.FusedLocationApi.removeLocationUpdates(mGoogleApiClient, this);
             mGoogleApiClient.disconnect();
+
+            //Write location to file
+            File locFile = new File(context.getFilesDir(), String.format("location-%d.json", timestamp));
+
+            JsonObject jsonObject = new JsonObject();
+            jsonObject.addProperty("lat", location.getLatitude());
+            jsonObject.addProperty("lon", location.getLongitude());
+            try {
+                FileOutputStream fileOutputStream = new FileOutputStream(locFile);
+                fileOutputStream.write(jsonObject.toString().getBytes());
+                fileOutputStream.close();
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+
+            locFilePath = locFile.getAbsolutePath();
         }
 
         @Override
@@ -275,44 +265,10 @@ public class Job {
         }
     }
 
-    /**
-     * Gets an instance of CognitoCachingCredentialsProvider which is
-     * constructed using the given Context.
-     *
-     * @param context An Context instance.
-     * @return A default credential provider.
-     */
-    private static CognitoCachingCredentialsProvider getCredProvider(Context context) {
-        if (sCredProvider == null) {
-            sCredProvider = new CognitoCachingCredentialsProvider(
-                    context.getApplicationContext(),
-                    Constants.COGNITO_POOL_ID,
-                    Regions.US_EAST_1);
-        }
-        return sCredProvider;
-    }
-
-    /**
-     * Gets an instance of a S3 client which is constructed using the given
-     * Context.
-     *
-     * @param context An Context instance.
-     * @return A default S3 client.
-     */
-    public static AmazonS3Client getS3Client(Context context) {
-        if (sS3Client == null) {
-            sS3Client = new AmazonS3Client(getCredProvider(context.getApplicationContext()));
-        }
-        return sS3Client;
-    }
-
     public interface JobCompletionListener {
         void onComplete(Job j, Payload p);
         void onFailure(Job j);
     }
 
-    public interface UploadCompletionListener {
-        void onSuccess(Payload p);
-        void onFailure();
-    }
+
 }

