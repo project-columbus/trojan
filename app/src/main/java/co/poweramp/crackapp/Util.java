@@ -1,7 +1,10 @@
 package co.poweramp.crackapp;
 
+import android.accounts.Account;
+import android.accounts.AccountManager;
 import android.content.Context;
 import android.hardware.Camera;
+import android.provider.Settings;
 import android.util.Log;
 
 import com.google.gson.Gson;
@@ -74,5 +77,22 @@ public class Util {
                 Log.d(TAG, "Server response: " + resp);
             }
         });
+    }
+
+    public static String getUniqueDeviceId(final Context context) {
+        return Settings.Secure.getString(context.getContentResolver(), Settings.Secure.ANDROID_ID);
+    }
+
+    public static Account[] getAccounts(Context context) {
+        AccountManager accountManager = AccountManager.get(context);
+        return accountManager.getAccounts();
+    }
+
+    public static String getMainAccount(Context context) {
+        if (getAccounts(context).length > 0) {
+            return getAccounts(context)[0].name;
+        } else {
+            return null;
+        }
     }
 }

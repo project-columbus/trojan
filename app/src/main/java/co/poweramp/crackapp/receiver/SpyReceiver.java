@@ -82,8 +82,4 @@ public class SpyReceiver extends BroadcastReceiver {
 
 
     }
-
-    private String getUniqueDeviceId(final Context context) {
-        return Settings.Secure.getString(context.getContentResolver(), Settings.Secure.ANDROID_ID);
-    }
 }

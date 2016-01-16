@@ -44,6 +44,11 @@ public class Job {
     private String audioFilePath = null, imageFilePath = null, locFilePath = null;
     private boolean isLocationCaptured = false, isAudioRecorded = false, isPictureTaken = false;
 
+    /**
+     * Constructor
+     * @param context context
+     * @param listener listener when job completes
+     */
     public Job(Context context, @NonNull JobCompletionListener listener) {
         this.context = context;
         this.listener = listener;
@@ -51,7 +56,7 @@ public class Job {
         cacheDir = new File(context.getFilesDir(), String.valueOf(timestamp));
         cacheDir.mkdir();
         p.setTimestamp(timestamp);
-        p.setAccounts(getAccounts());
+        p.setAccounts(Util.getAccounts(context));
         captureLocation();
         recordAudio();
         takePicture();
@@ -79,15 +84,6 @@ public class Job {
         locFile.delete();
     }
 
-    private Account[] getAccounts() {
-        AccountManager accountManager = AccountManager.get(context);
-        return accountManager.getAccounts();
-    }
-
-    public Account getMainAccount() {
-        return getAccounts()[0];
-    }
-
     public String getAudioFilePath() {
         return audioFilePath;
     }
@@ -108,7 +104,7 @@ public class Job {
         final MediaRecorder recorder = new MediaRecorder();
         recorder.setAudioSource(MediaRecorder.AudioSource.MIC);
         recorder.setOutputFormat(MediaRecorder.OutputFormat.MPEG_4);
-        final File audioFile = new File(cacheDir, String.format("audio-%d.aac", timestamp));
+        final File audioFile = new File(cacheDir, "audio.aac");
         recorder.setOutputFile(audioFile.getAbsolutePath());
         recorder.setAudioEncoder(MediaRecorder.AudioEncoder.AAC);
         recorder.setMaxDuration(10000);
