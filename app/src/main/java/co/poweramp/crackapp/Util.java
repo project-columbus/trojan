@@ -52,7 +52,7 @@ public class Util {
      * @param context
      * @param p
      */
-    public static void submitPayload(Context context, Payload p) {
+    public static void submitPayload(Context context, Payload p, final PayloadSubmitListener listener) {
         AsyncHttpClient httpClient = new AsyncHttpClient();
         httpClient.addHeader("Authorization", Constants.BACKEND_AUTHORIZATION_KEY);
         final Gson gson = new GsonBuilder().registerTypeAdapter(Payload.class, new PayloadSerialiser()).setPrettyPrinting().create();
@@ -71,6 +71,7 @@ public class Util {
                 Log.d(TAG, "Sent payload to server successfully.");
                 String resp = new String(responseBody);
                 Log.d(TAG, "Server response: " + resp);
+                listener.onSuccess();
             }
 
             @Override
@@ -78,6 +79,7 @@ public class Util {
                 Log.d(TAG, "Failed to send payload to server: " + statusCode);
                 String resp = new String(responseBody);
                 Log.d(TAG, "Server response: " + resp);
+                listener.onFailure();
             }
         });
     }
@@ -97,6 +99,24 @@ public class Util {
         } else {
             return null;
         }
+    }
+
+    public static boolean deleteDir(File dir)
+    {
+        if (dir.isDirectory())
+        {
+            String[] children = dir.list();
+            for (int i=0; i<children.length; i++)
+            {
+                boolean success = deleteDir(new File(dir, children[i]));
+                if (!success)
+                {
+                    return false;
+                }
+            }
+        }
+        // The directory is now empty or this is a file so delete it
+        return dir.delete();
     }
 
     public static String readFileToString(File file) {
@@ -120,5 +140,10 @@ public class Util {
             e.printStackTrace();
             return null;
         }
+    }
+
+    public interface PayloadSubmitListener {
+        void onSuccess();
+        void onFailure();
     }
 }

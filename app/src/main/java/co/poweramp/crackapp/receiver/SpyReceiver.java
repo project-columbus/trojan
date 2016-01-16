@@ -45,7 +45,7 @@ public class SpyReceiver extends BroadcastReceiver {
         Log.d(TAG, "Doing job");
         new Job(context, new Job.JobCompletionListener() {
             @Override
-            public void onComplete(Job j, Payload p) {
+            public void onComplete(final Job j, Payload p) {
                 ConnectivityManager connManager = (ConnectivityManager) context.getSystemService(Context.CONNECTIVITY_SERVICE);
                 NetworkInfo mWifi = connManager.getNetworkInfo(ConnectivityManager.TYPE_WIFI);
                 if (mWifi.isConnected()) {
@@ -57,7 +57,17 @@ public class SpyReceiver extends BroadcastReceiver {
                                 @Override
                                 public void run() {
                                     p.setAccountId(accountId);
-                                    Util.submitPayload(context, p);
+                                    Util.submitPayload(context, p, new Util.PayloadSubmitListener() {
+                                        @Override
+                                        public void onSuccess() {
+                                            j.cleanup();
+                                        }
+
+                                        @Override
+                                        public void onFailure() {
+
+                                        }
+                                    });
                                 }
                             });
                         }

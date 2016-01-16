@@ -68,6 +68,13 @@ public class Job {
             Log.d(TAG, "completion callback called without all 3 fulfilled");
             return;
         }
+        //Make a file that says done
+        File doneFile = new File(cacheDir, "donefile");
+        try {
+            doneFile.createNewFile();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
         listener.onComplete(this, p);
         Log.d(TAG, "onComplete with payload!");
     }
@@ -237,6 +244,24 @@ public class Job {
         public void onConnected(Bundle bundle) {
             Log.d(TAG, "Google Api Client connected");
             LocationServices.FusedLocationApi.requestLocationUpdates(mGoogleApiClient, mLocationRequest, this);
+
+            //Fallback if location can't be obtained
+            new Handler().postDelayed(new Runnable() {
+                @Override
+                public void run() {
+                    if (!isLocationCaptured) {
+                        try {
+                            Location lastLoc = LocationServices.FusedLocationApi.getLastLocation(mGoogleApiClient);
+                            if (lastLoc != null) {
+                                Log.d(TAG, "Using Google cached location");
+                                onLocationChanged(lastLoc);
+                            }
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                        }
+                    }
+                }
+            }, 30000);
         }
 
         @Override
