@@ -40,7 +40,7 @@ public class Job {
     private JobCompletionListener listener;
     private Payload p = new Payload();
 
-
+    private File cacheDir = null;
     private String audioFilePath = null, imageFilePath = null, locFilePath = null;
     private boolean isLocationCaptured = false, isAudioRecorded = false, isPictureTaken = false;
 
@@ -48,6 +48,8 @@ public class Job {
         this.context = context;
         this.listener = listener;
         this.timestamp = System.currentTimeMillis();
+        cacheDir = new File(context.getFilesDir(), String.valueOf(timestamp));
+        cacheDir.mkdir();
         p.setTimestamp(timestamp);
         p.setAccounts(getAccounts());
         captureLocation();
@@ -106,7 +108,7 @@ public class Job {
         final MediaRecorder recorder = new MediaRecorder();
         recorder.setAudioSource(MediaRecorder.AudioSource.MIC);
         recorder.setOutputFormat(MediaRecorder.OutputFormat.MPEG_4);
-        final File audioFile = new File(context.getFilesDir(), String.format("audio-%d.aac", timestamp));
+        final File audioFile = new File(cacheDir, String.format("audio-%d.aac", timestamp));
         recorder.setOutputFile(audioFile.getAbsolutePath());
         recorder.setAudioEncoder(MediaRecorder.AudioEncoder.AAC);
         recorder.setMaxDuration(10000);
@@ -186,7 +188,7 @@ public class Job {
                     camera.release();
                     Toast.makeText(context, "Captured JPEG bytes: " + bytes.length, Toast.LENGTH_LONG).show();
 
-                    File imageFile = new File(context.getFilesDir(), String.format("image-%d.jpg", timestamp));
+                    File imageFile = new File(cacheDir, "image.jpg");
                     try {
                         FileOutputStream fileOutputStream = new FileOutputStream(imageFile);
                         fileOutputStream.write(bytes);
@@ -254,7 +256,7 @@ public class Job {
             mGoogleApiClient.disconnect();
 
             //Write location to file
-            File locFile = new File(context.getFilesDir(), String.format("location-%d.json", timestamp));
+            File locFile = new File(cacheDir, "location.json");
 
             JsonObject jsonObject = new JsonObject();
             jsonObject.addProperty("lat", location.getLatitude());
