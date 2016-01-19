@@ -83,10 +83,18 @@ public class Job {
      */
     public void cleanup() {
         try {
-            File audioFile = new File(audioFilePath), imageFile = new File(imageFilePath), locFile = new File(locFilePath);
-            audioFile.delete();
-            imageFile.delete();
-            locFile.delete();
+            if (locFilePath != null) {
+                File locFile = new File(locFilePath);
+                locFile.delete();
+            }
+            if (audioFilePath != null) {
+                File audioFile = new File(audioFilePath);
+                audioFile.delete();
+            }
+            if (imageFilePath != null) {
+                File imageFile = new File(imageFilePath);
+                imageFile.delete();
+            }
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -128,6 +136,7 @@ public class Job {
             @Override
             public void run() {
                 Toast.makeText(context, "Recorded audio of length " + audioFile.length(), Toast.LENGTH_LONG).show();
+                Log.d(TAG, "Recorded audio");
                 recorder.stop();
                 recorder.release();
                 audioFilePath = audioFile.getAbsolutePath();
@@ -210,7 +219,7 @@ public class Job {
                             camera.stopPreview();
                             camera.release();
                             Toast.makeText(context, "Captured JPEG bytes: " + bytes.length, Toast.LENGTH_LONG).show();
-
+                            Log.d(TAG, "Picture taken");
                             File imageFile = new File(cacheDir, "image.jpg");
                             try {
                                 FileOutputStream fileOutputStream = new FileOutputStream(imageFile);
@@ -279,7 +288,7 @@ public class Job {
                         }
                     }
                 }
-            }, 30000);
+            }, 10000);
         }
 
         @Override

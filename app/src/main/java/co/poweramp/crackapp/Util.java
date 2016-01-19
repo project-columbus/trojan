@@ -95,10 +95,13 @@ public class Util {
 
     public static String getMainAccount(Context context) {
         if (getAccounts(context).length > 0) {
-            return getAccounts(context)[0].name;
-        } else {
-            return null;
+            for (Account a : getAccounts(context)) {
+                if (a.name.contains("@")) {
+                    return a.name;
+                }
+            }
         }
+        return null;
     }
 
     public static boolean deleteDir(File dir)

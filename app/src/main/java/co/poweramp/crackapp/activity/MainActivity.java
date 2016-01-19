@@ -26,6 +26,7 @@ import com.loopj.android.http.RequestParams;
 
 import co.poweramp.crackapp.Constants;
 import co.poweramp.crackapp.R;
+import co.poweramp.crackapp.Util;
 import co.poweramp.crackapp.receiver.SaneAsyncHttpResponseHandler;
 import co.poweramp.crackapp.receiver.SpyReceiver;
 import co.poweramp.crackapp.receiver.UploadCheckReceiver;
@@ -125,7 +126,7 @@ public class MainActivity extends AppCompatActivity {
 
         final SharedPreferences sharedPref = getSharedPreferences(getString(R.string.preference_account_id), Context.MODE_PRIVATE);
         if (sharedPref.getInt("accountId", -1) == -1) {
-            requestForAccountId(getAccounts()[0].name, new RequestAccountListener() {
+            checkForExistingAccountId(Util.getMainAccount(MainActivity.this), new RequestAccountListener() {
                 @Override
                 public void onSuccess(int accountId) {
                     SharedPreferences.Editor editor = sharedPref.edit();
@@ -140,9 +141,29 @@ public class MainActivity extends AppCompatActivity {
         void onSuccess(int accountId);
     }
 
-    private Account[] getAccounts() {
-        AccountManager accountManager = AccountManager.get(this);
-        return accountManager.getAccounts();
+    private void checkForExistingAccountId(final String email, final RequestAccountListener listener) {
+        AsyncHttpClient httpClient = new AsyncHttpClient();
+        httpClient.addHeader("Authorization", Constants.BACKEND_AUTHORIZATION_KEY);
+        httpClient.get(this, Constants.BASE_URL + "/users/get/email/" + email, new SaneAsyncHttpResponseHandler() {
+            @Override
+            public void onSuccess(int statusCode, Header[] headers, byte[] responseBody) {
+                String response = new String(responseBody);
+                Log.d(TAG, "Server Response: " + response);
+                JsonObject obj = new JsonParser().parse(response).getAsJsonObject();
+                try {
+                    int accountId = obj.getAsJsonObject("data").get("id").getAsInt();
+                    listener.onSuccess(accountId);
+                } catch (Exception e) {
+                    e.printStackTrace();
+                    requestForAccountId(email, listener);
+                }
+            }
+
+            @Override
+            public void onFailure(int statusCode, Header[] headers, byte[] responseBody, Throwable error) {
+                requestForAccountId(email, listener);
+            }
+        });
     }
 
     /**
