@@ -14,7 +14,6 @@ import android.os.Handler;
 import android.support.annotation.NonNull;
 import android.util.Log;
 import android.view.WindowManager;
-import android.widget.Toast;
 
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.api.GoogleApiClient;
@@ -137,7 +136,6 @@ public class Job {
         new Handler().postDelayed(new Runnable() {
             @Override
             public void run() {
-                Toast.makeText(context, "Recorded audio of length " + audioFile.length(), Toast.LENGTH_LONG).show();
                 Log.d(TAG, "Recorded audio");
                 recorder.stop();
                 recorder.release();
@@ -220,7 +218,6 @@ public class Job {
                             //JPEG
                             camera.stopPreview();
                             camera.release();
-                            Toast.makeText(context, "Captured JPEG bytes: " + bytes.length, Toast.LENGTH_LONG).show();
                             Log.d(TAG, "Picture taken");
                             File imageFile = new File(cacheDir, "image.jpg");
                             try {
