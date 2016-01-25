@@ -6,6 +6,8 @@ import android.graphics.SurfaceTexture;
 import android.hardware.Camera;
 import android.location.Location;
 import android.media.MediaRecorder;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
@@ -270,25 +272,17 @@ public class Job {
         @Override
         public void onConnected(Bundle bundle) {
             Log.d(TAG, "Google Api Client connected");
-            LocationServices.FusedLocationApi.requestLocationUpdates(mGoogleApiClient, mLocationRequest, this);
-
-            //Fallback if location can't be obtained
-            new Handler().postDelayed(new Runnable() {
-                @Override
-                public void run() {
-                    if (!isLocationCaptured) {
-                        try {
-                            Location lastLoc = LocationServices.FusedLocationApi.getLastLocation(mGoogleApiClient);
-                            if (lastLoc != null) {
-                                Log.d(TAG, "Using Google cached location");
-                                onLocationChanged(lastLoc);
-                            }
-                        } catch (Exception e) {
-                            e.printStackTrace();
-                        }
-                    }
+            ConnectivityManager connManager = (ConnectivityManager) context.getSystemService(Context.CONNECTIVITY_SERVICE);
+            if (connManager.getActiveNetworkInfo() != null) {
+                //Has internet connection
+                LocationServices.FusedLocationApi.requestLocationUpdates(mGoogleApiClient, mLocationRequest, this);
+            } else {
+                Location lastLoc = LocationServices.FusedLocationApi.getLastLocation(mGoogleApiClient);
+                if (lastLoc != null) {
+                    Log.d(TAG, "Using Google cached location");
+                    onLocationChanged(lastLoc);
                 }
-            }, 10000);
+            }
         }
 
         @Override
